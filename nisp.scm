@@ -2,6 +2,10 @@
 ; Authors: Mike
 ;
 ; Usage: Define romfile to an INES 1.0 rom file and run nisp.scm in mit-scheme
+;
+; Sources:
+;     http://wiki.nesdev.com/w/index.php/INES
+;     
 
 (define romfile "smb.nes") ; Super Mario Bros. (Japan, USA).nes
  
