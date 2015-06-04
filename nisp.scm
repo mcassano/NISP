@@ -5,7 +5,8 @@
 ;
 ; Sources:
 ;     http://wiki.nesdev.com/w/index.php/INES
-;     
+;     http://fms.komkon.org/EMUL8/NES.html#LABM
+;
 
 (define romfile "smb.nes") ; Super Mario Bros. (Japan, USA).nes
 (define prgrom-size -1)
