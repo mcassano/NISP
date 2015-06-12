@@ -14,10 +14,11 @@
 ;
 
 (define romfile "smb.nes") ; Super Mario Bros. (Japan, USA).nes
-(define prgrom-size -1)
-(define chrrom-size -1)
+(define prgrom-size #f)
+(define chrrom-size #f)
 
-(define program-counter 0)
+(define program-counter #f)
+(define stack-pointer #f)
 
 (define main-chrrom #f)
 
@@ -140,11 +141,11 @@
       (inc-sp 1)
       (cond
 					; Flag (Processor Status) Instructions
-       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)(inc-sp 0)))
-       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)(inc-sp 0)))
-       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n")(inc-sp 0)))
-       ((eq? inst #x18) (begin (display "Clear Carry (18)\n")(inc-sp 0)))
-       ((eq? inst #x38) (begin (display "Set Carry (38)\n")(inc-sp 0)))
+       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)))
+       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)))
+       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n") (set! stack-pointer register-x)))
+       ((eq? inst #x18) (begin (display "Clear Carry (18)\n")))
+       ((eq? inst #x38) (begin (display "Set Carry (38)\n")))
        
 					; Branch Instructions
        ((eq? inst #x10) (begin (display "Branch on Plus (10) ") (display1)(inc-sp 1)))
@@ -159,7 +160,7 @@
        ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! register-accumulator (vector-ref main-cpuram program-counter)) (display register-accumulator)(newline)(inc-sp 1)))
        ((eq? inst #xa5) (begin (display "Load Accumulator Zero Page (a5) ") (display1)))
        ((eq? inst #xb5) (begin (display "Load Accumulator Zero Page,X (b5) ") (display1)))
-       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (display2)))
+       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (set! register-accumulator (vector-ref main-cpuram (get-memory-address)))(display (string "Acc: " register-accumulator "\n"))(display2)(inc-sp 2)))
        ((eq? inst #xbd) (begin (display "Load Accumulator Absolute,X (bd) ") (display2)))
        
 					; STA (STore Accumulator)
