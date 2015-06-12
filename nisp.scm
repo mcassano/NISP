@@ -16,8 +16,9 @@
 
 (define stack-pointer 0)
 
-(define main-program #f)
 (define main-memory #f)
+(define main-prgrom #f)
+(define main-chrrom #f)
 
 (define flag-interrupt #f)
 (define flag-decimal #f)
@@ -33,14 +34,19 @@
 	  ((and (= num 3) (eq? char (integer->char #x1a))) #t) ; MS-DOS EOF
 	  (else #f))))
 
-(define init-program
-  (lambda (rom-port)
-    (set! main-program (make-initialized-vector prgrom-size (lambda (idx) (char->integer (read-char rom-port)))))
-    ))
-			   
 (define init-memory
   (lambda (bytes)
     (set! main-memory (make-vector bytes 0))
+    ))
+
+(define init-prgrom
+  (lambda (rom-port)
+    (set! main-prgrom (make-initialized-vector prgrom-size (lambda (idx) (char->integer (read-char rom-port)))))
+    ))
+
+(define init-chrrom
+  (lambda (rom-port)
+    (set! main-chrrom (make-initialized-vector chrrom-size (lambda (idx) (char->integer (read-char rom-port)))))
     ))
 
 (define parse-header
@@ -76,23 +82,23 @@
 
 (define display1
   (lambda ()
-    (display (vector-ref main-program (+ stack-pointer 1)))
+    (display (vector-ref main-prgrom (+ stack-pointer 1)))
     (newline)
     ))
 
 (define display2
   (lambda ()
-    (display (vector-ref main-program (+ stack-pointer 1)))
+    (display (vector-ref main-prgrom (+ stack-pointer 1)))
     (display " ")
-    (display (vector-ref main-program (+ stack-pointer 2)))
+    (display (vector-ref main-prgrom (+ stack-pointer 2)))
     (newline)
     ))
 
 (define get-memory-address
   (lambda ()
     (begin
-      (define highByte (arithmetic-shift (vector-ref main-program (+ stack-pointer 1)) 8))
-      (define lowByte (vector-ref main-program (+ stack-pointer 2)))
+      (define highByte (arithmetic-shift (vector-ref main-prgrom (+ stack-pointer 1)) 8))
+      (define lowByte (vector-ref main-prgrom (+ stack-pointer 2)))
       (newline)
       (display highByte)
       (newline)
@@ -112,7 +118,7 @@
 (define consume-instructions
   (lambda (cntr)
     (begin
-      (define inst (vector-ref main-program stack-pointer))
+      (define inst (vector-ref main-prgrom stack-pointer))
       (cond
 					; Flag (Processor Status) Instructions
        ((eq? inst #x78) (begin (display "SEI Set Interrupt\n") (set! flag-interrupt #t)(inc-sp 1)))
@@ -131,7 +137,7 @@
        ((eq? inst #x7e) (begin (display "Rotate right Absolute,X ") (display2)(inc-sp 3)))
 
 					; LDA (LoaD Accumulator)
-       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate ") (set! register-accumulator (vector-ref main-program (+ stack-pointer 1))) (display register-accumulator)(newline)(inc-sp 2)))
+       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate ") (set! register-accumulator (vector-ref main-prgrom (+ stack-pointer 1))) (display register-accumulator)(newline)(inc-sp 2)))
        ((eq? inst #xa5) (begin (display "Load Accumulator Zero Page ") (display1)))
        ((eq? inst #xb5) (begin (display "Load Accumulator Zero Page,X ") (display1)))
        ((eq? inst #xad) (begin (display "Load Accumulator Absolute ") (display2)))
@@ -143,7 +149,7 @@
        ((eq? inst #x9d) (begin (display "Store accumulator Absolute,X ") (display2)))
        
 					; LDX (LoaD X register)
-       ((eq? inst #xa2) (begin (display "Load X register Immediate ") (set! register-x (vector-ref main-program (+ stack-pointer 1))) (display1)(inc-sp 2)))
+       ((eq? inst #xa2) (begin (display "Load X register Immediate ") (set! register-x (vector-ref main-prgrom (+ stack-pointer 1))) (display1)(inc-sp 2)))
        ((eq? inst #xbe) (begin (display "Load X register Absolute,Y ") (display2)))
        ((eq? inst #xae) (begin (display "Load X register Absolute ") (display2)))
 
@@ -230,7 +236,8 @@
 	       (check-magic-header (read-char rom-port) 3))
 	  (if (parse-header rom-port)
 	      (begin
-		(init-program rom-port)
+		(init-prgrom rom-port)
+		(init-chrrom rom-port)
 		(set! stack-pointer 0)
 		(run-program)
 		)
