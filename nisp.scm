@@ -100,15 +100,15 @@
 
 (define display1
   (lambda ()
-    (display (vector-ref main-cpuram (+ stack-pointer 1)))
+    (display (vector-ref main-cpuram stack-pointer))
     (newline)
     ))
 
 (define display2
   (lambda ()
-    (display (vector-ref main-cpuram (+ stack-pointer 1)))
+    (display (vector-ref main-cpuram stack-pointer))
     (display " ")
-    (display (vector-ref main-cpuram (+ stack-pointer 2)))
+    (display (vector-ref main-cpuram (+ stack-pointer 1)))
     (newline)
     ))
 
@@ -168,7 +168,7 @@
        ((eq? inst #x9d) (begin (display "Store accumulator Absolute,X (9d) ") (display2)))
        
 					; LDX (LoaD X register)
-       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! register-x (vector-ref main-cpuram (+ stack-pointer 1))) (display1)(inc-sp 1)))
+       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! register-x (vector-ref main-cpuram stack-pointer)) (display1)(inc-sp 1)))
        ((eq? inst #xbe) (begin (display "Load X register Absolute,Y (be) ") (display2)))
        ((eq? inst #xae) (begin (display "Load X register Absolute (ae) ") (display2)))
 
