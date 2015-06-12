@@ -19,11 +19,12 @@
 
 (define stack-pointer 0)
 
-(define main-prgrom #f)
 (define main-chrrom #f)
 
 (define main-cpuram #f)
 (define main-ppuram #f)
+
+(define interrupt-reset #f)
 
 (define flag-interrupt #f)
 (define flag-decimal #f)
@@ -50,8 +51,15 @@
     ))
 
 (define init-prgrom
-  (lambda (rom-port)
-    (set! main-prgrom (make-initialized-vector prgrom-size (lambda (idx) (char->integer (read-char rom-port)))))
+  (lambda (cnt size rom-port)
+    (begin
+      (if (< cnt size)
+	  (begin
+	    (vector-set! main-cpuram (+ cnt #x8000) (char->integer (read-char rom-port)))
+	    (init-prgrom (+ cnt 1) size rom-port)
+	    )
+	  )
+      )
     ))
 
 (define init-chrrom
@@ -92,23 +100,23 @@
 
 (define display1
   (lambda ()
-    (display (vector-ref main-prgrom (+ stack-pointer 1)))
+    (display (vector-ref main-cpuram (+ stack-pointer 1)))
     (newline)
     ))
 
 (define display2
   (lambda ()
-    (display (vector-ref main-prgrom (+ stack-pointer 1)))
+    (display (vector-ref main-cpuram (+ stack-pointer 1)))
     (display " ")
-    (display (vector-ref main-prgrom (+ stack-pointer 2)))
+    (display (vector-ref main-cpuram (+ stack-pointer 2)))
     (newline)
     ))
 
 (define get-memory-address
   (lambda ()
     (begin
-      (define highByte (arithmetic-shift (vector-ref main-prgrom (+ stack-pointer 1)) 8))
-      (define lowByte (vector-ref main-prgrom (+ stack-pointer 2)))
+      (define lowByte (vector-ref main-cpuram (+ stack-pointer 0)))
+      (define highByte (arithmetic-shift (vector-ref main-cpuram (+ stack-pointer 1)) 8))
       (newline)
       (display highByte)
       (newline)
@@ -128,38 +136,39 @@
 (define consume-instructions
   (lambda (cntr)
     (begin
-      (define inst (vector-ref main-prgrom stack-pointer))
+      (define inst (vector-ref main-cpuram stack-pointer))
+      (inc-sp 1)
       (cond
 					; Flag (Processor Status) Instructions
-       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)(inc-sp 1)))
-       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)(inc-sp 1)))
-       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n")(inc-sp 1)))
-       ((eq? inst #x18) (begin (display "Clear Carry (18)\n")(inc-sp 1)))
-       ((eq? inst #x38) (begin (display "Set Carry (38)\n")(inc-sp 1)))
+       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)(inc-sp 0)))
+       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)(inc-sp 0)))
+       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n")(inc-sp 0)))
+       ((eq? inst #x18) (begin (display "Clear Carry (18)\n")(inc-sp 0)))
+       ((eq? inst #x38) (begin (display "Set Carry (38)\n")(inc-sp 0)))
        
 					; Branch Instructions
-       ((eq? inst #x10) (begin (display "Branch on Plus (10) ") (display1)(inc-sp 2)))
-       ((eq? inst #xb0) (begin (display "Branch on Carry Set (b0) ") (display1)(inc-sp 2)))
-       ((eq? inst #xd0) (begin (display "Branch on Not Equal (d0) ") (display1)(inc-sp 2)))
-       ((eq? inst #xf0) (begin (display "Branch on Equal (f0) ") (display1)(inc-sp 2)))
+       ((eq? inst #x10) (begin (display "Branch on Plus (10) ") (display1)(inc-sp 1)))
+       ((eq? inst #xb0) (begin (display "Branch on Carry Set (b0) ") (display1)(inc-sp 1)))
+       ((eq? inst #xd0) (begin (display "Branch on Not Equal (d0) ") (display1)(inc-sp 1)))
+       ((eq? inst #xf0) (begin (display "Branch on Equal (f0) ") (display1)(inc-sp 1)))
        
 					; ROR (ROtate Right)
-       ((eq? inst #x7e) (begin (display "Rotate right Absolute,X (7e) ") (display2)(inc-sp 3)))
+       ((eq? inst #x7e) (begin (display "Rotate right Absolute,X (7e) ") (display2)(inc-sp 2)))
 
 					; LDA (LoaD Accumulator)
-       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! register-accumulator (vector-ref main-prgrom (+ stack-pointer 1))) (display register-accumulator)(newline)(inc-sp 2)))
+       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! register-accumulator (vector-ref main-cpuram stack-pointer)) (display register-accumulator)(newline)(inc-sp 1)))
        ((eq? inst #xa5) (begin (display "Load Accumulator Zero Page (a5) ") (display1)))
        ((eq? inst #xb5) (begin (display "Load Accumulator Zero Page,X (b5) ") (display1)))
        ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (display2)))
        ((eq? inst #xbd) (begin (display "Load Accumulator Absolute,X (bd) ") (display2)))
        
 					; STA (STore Accumulator)
-       ((eq? inst #x8d) (begin (display "Store accumulator Absolute (8d) ")  (vector-set! main-cpuram (get-memory-address) register-accumulator)(inc-sp 3)))
+       ((eq? inst #x8d) (begin (display "Store accumulator Absolute (8d) ")  (vector-set! main-cpuram (get-memory-address) register-accumulator)(inc-sp 2)))
        ((eq? inst #x85) (begin (display "Store accumulator Zero Page (85) ") (display1)))
        ((eq? inst #x9d) (begin (display "Store accumulator Absolute,X (9d) ") (display2)))
        
 					; LDX (LoaD X register)
-       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! register-x (vector-ref main-prgrom (+ stack-pointer 1))) (display1)(inc-sp 2)))
+       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! register-x (vector-ref main-cpuram (+ stack-pointer 1))) (display1)(inc-sp 1)))
        ((eq? inst #xbe) (begin (display "Load X register Absolute,Y (be) ") (display2)))
        ((eq? inst #xae) (begin (display "Load X register Absolute (ae) ") (display2)))
 
@@ -231,6 +240,7 @@
 	  )
       )
     ))
+  
 
 (define run
   (lambda () 
@@ -244,12 +254,19 @@
 	       (check-magic-header (read-char rom-port) 3))
 	  (if (parse-header rom-port)
 	      (begin
-                ; Init memory to all zeros 1kB
-		(init-cpuram 2048)
-		(init-ppuram 2048)
-		(init-prgrom rom-port)
+                ; Init cpu memory to all zeros 64kB
+		(init-cpuram 65536)
+		; Init ppu memory to all zeros 16kB
+		(init-ppuram 16384)
+		; Copy prgrom to $8000 of cpu memory
+		(display "here")
+		(init-prgrom 0 prgrom-size rom-port)
+		(display "here2")
 		(init-chrrom rom-port)
-		(set! stack-pointer 0)
+		(set! stack-pointer #xFFFC)
+		(set! interrupt-reset (get-memory-address))
+		(display (string "Reset vector: " interrupt-reset))(newline)
+		(set! stack-pointer interrupt-reset)
 		(run-program)
 		)
 	      (display "Parse header failed."))
