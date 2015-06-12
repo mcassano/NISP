@@ -17,9 +17,6 @@
 (define prgrom-size #f)
 (define chrrom-size #f)
 
-(define program-counter #f)
-(define stack-pointer #f)
-
 (define main-chrrom #f)
 
 (define main-cpuram #f)
@@ -30,8 +27,10 @@
 (define flag-interrupt #f)
 (define flag-decimal #f)
 
-(define register-accumulator #f)
-(define register-x #f)
+(define reg-accumulator #f)
+(define reg-x #f)
+(define reg-pc #f)
+(define reg-sp #f)
 
 (define check-magic-header
   (lambda (char num)
@@ -101,23 +100,23 @@
 
 (define display1
   (lambda ()
-    (display (vector-ref main-cpuram program-counter))
+    (display (vector-ref main-cpuram reg-pc))
     (newline)
     ))
 
 (define display2
   (lambda ()
-    (display (vector-ref main-cpuram program-counter))
+    (display (vector-ref main-cpuram reg-pc))
     (display " ")
-    (display (vector-ref main-cpuram (+ program-counter 1)))
+    (display (vector-ref main-cpuram (+ reg-pc 1)))
     (newline)
     ))
 
 (define get-memory-address
   (lambda ()
     (begin
-      (define lowByte (vector-ref main-cpuram (+ program-counter 0)))
-      (define highByte (arithmetic-shift (vector-ref main-cpuram (+ program-counter 1)) 8))
+      (define lowByte (vector-ref main-cpuram (+ reg-pc 0)))
+      (define highByte (arithmetic-shift (vector-ref main-cpuram (+ reg-pc 1)) 8))
       (newline)
       (display highByte)
       (newline)
@@ -131,19 +130,19 @@
 
 (define inc-sp
   (lambda (num)
-    (set! program-counter (+ program-counter num))
+    (set! reg-pc (+ reg-pc num))
     ))
 
 (define consume-instructions
   (lambda (cntr)
     (begin
-      (define inst (vector-ref main-cpuram program-counter))
+      (define inst (vector-ref main-cpuram reg-pc))
       (inc-sp 1)
       (cond
 					; Flag (Processor Status) Instructions
        ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)))
        ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)))
-       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n") (set! stack-pointer register-x)))
+       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n") (set! reg-sp reg-x)))
        ((eq? inst #x18) (begin (display "Clear Carry (18)\n")))
        ((eq? inst #x38) (begin (display "Set Carry (38)\n")))
        
@@ -157,19 +156,19 @@
        ((eq? inst #x7e) (begin (display "Rotate right Absolute,X (7e) ") (display2)(inc-sp 2)))
 
 					; LDA (LoaD Accumulator)
-       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! register-accumulator (vector-ref main-cpuram program-counter)) (display register-accumulator)(newline)(inc-sp 1)))
+       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! reg-accumulator (vector-ref main-cpuram reg-pc)) (display reg-accumulator)(newline)(inc-sp 1)))
        ((eq? inst #xa5) (begin (display "Load Accumulator Zero Page (a5) ") (display1)))
        ((eq? inst #xb5) (begin (display "Load Accumulator Zero Page,X (b5) ") (display1)))
-       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (set! register-accumulator (vector-ref main-cpuram (get-memory-address)))(display (string "Acc: " register-accumulator "\n"))(display2)(inc-sp 2)))
+       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (set! reg-accumulator (vector-ref main-cpuram (get-memory-address)))(display (string "Acc: " reg-accumulator "\n"))(display2)(inc-sp 2)))
        ((eq? inst #xbd) (begin (display "Load Accumulator Absolute,X (bd) ") (display2)))
        
 					; STA (STore Accumulator)
-       ((eq? inst #x8d) (begin (display "Store accumulator Absolute (8d) ")  (vector-set! main-cpuram (get-memory-address) register-accumulator)(inc-sp 2)))
+       ((eq? inst #x8d) (begin (display "Store accumulator Absolute (8d) ")  (vector-set! main-cpuram (get-memory-address) reg-accumulator)(inc-sp 2)))
        ((eq? inst #x85) (begin (display "Store accumulator Zero Page (85) ") (display1)))
        ((eq? inst #x9d) (begin (display "Store accumulator Absolute,X (9d) ") (display2)))
        
 					; LDX (LoaD X register)
-       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! register-x (vector-ref main-cpuram program-counter)) (display1)(inc-sp 1)))
+       ((eq? inst #xa2) (begin (display "Load X register Immediate (a2) ") (set! reg-x (vector-ref main-cpuram reg-pc)) (display1)(inc-sp 1)))
        ((eq? inst #xbe) (begin (display "Load X register Absolute,Y (be) ") (display2)))
        ((eq? inst #xae) (begin (display "Load X register Absolute (ae) ") (display2)))
 
@@ -264,10 +263,10 @@
 		(init-prgrom 0 prgrom-size rom-port)
 		(display "here2")
 		(init-chrrom rom-port)
-		(set! program-counter #xFFFC)
+		(set! reg-pc #xFFFC)
 		(set! interrupt-reset (get-memory-address))
 		(display (string "Reset vector: " interrupt-reset))(newline)
-		(set! program-counter interrupt-reset)
+		(set! reg-pc interrupt-reset)
 		(run-program)
 		)
 	      (display "Parse header failed."))
