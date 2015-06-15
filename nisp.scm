@@ -218,11 +218,11 @@
        ((eq? inst #xe6) (begin (display "!Increment memory Zero Page (e6) ") (display1)))
        
 					; Register Instructions
-       ((eq? inst #xca) (begin (display "*Decrement X (ca)")))
-       ((eq? inst #xc8) (begin (display "!Increment Y (c8)")))
-       ((eq? inst #xa8) (begin (display "!Transfer A to Y (a8)")))
-       ((eq? inst #x88) (begin (display "!Decrement Y (88)")))
-       ((eq? inst #xe8) (begin (display "!Increment X (e8)")))
+       ((eq? inst #xca) (begin (display "Decrement X (ca)")(set! reg-x (- reg-x 1)))
+       ((eq? inst #xc8) (begin (display "Increment Y (c8)")(set! reg-y (+ reg-y 1)))
+       ((eq? inst #xa8) (begin (display "Transfer A to Y (a8)")(set! reg-y reg-a)))
+       ((eq? inst #x88) (begin (display "Decrement Y (88)")(set! reg-y (- reg-y 1)))
+       ((eq? inst #xe8) (begin (display "Increment X (e8)")(set! reg-x (+ reg-x 1)))
 
 					; Stack Instructions
        ((eq? inst #x68) (begin (display "!Pull accumulator (68)")))
