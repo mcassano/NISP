@@ -13,6 +13,8 @@
 ;     http://nintendoage.com/forum/messageview.cfm?catid=22&threadid=7155
 ;
 
+(define hexIndex (vector "0" "1" "2" "3" "4" "5" "6" "7" "8" "9" "A" "B" "C" "D" "E" "F"))
+
 (define romfile "smb.nes") ; Super Mario Bros. (Japan, USA).nes
 (define prgrom-size #f)
 (define chrrom-size #f)
@@ -100,16 +102,18 @@
 
 (define display1
   (lambda ()
+    (display "(")
     (display (vector-ref main-cpuram reg-pc))
-    (newline)
+    (display ") ")
     ))
 
 (define display2
   (lambda ()
+    (display "(")
     (display (vector-ref main-cpuram reg-pc))
     (display " ")
     (display (vector-ref main-cpuram (+ reg-pc 1)))
-    (newline)
+    (display ") ")
     ))
 
 (define get-memory-address
@@ -117,16 +121,21 @@
     (begin
       (define lowByte (vector-ref main-cpuram (+ reg-pc 0)))
       (define highByte (arithmetic-shift (vector-ref main-cpuram (+ reg-pc 1)) 8))
-      (newline)
-      (display highByte)
-      (newline)
-      (display lowByte)
-      (newline)
-      (display (+ highByte lowByte))
-      (newline)
       )
+    (display (string "[$" (itoh (+ highByte lowByte)) "] "))
     (+ highByte lowByte)
     ))
+
+(define itoh
+  (lambda (int)
+    (if (eq? int 0)
+	""
+	(begin
+	  (string (itoh (arithmetic-shift int -4)) (vector-ref hexIndex (bitwise-and int #xF)))
+	  )
+	)
+    ))
+    
 
 (define inc-sp
   (lambda (num)
@@ -140,11 +149,11 @@
       (inc-sp 1)
       (cond
 					; Flag (Processor Status) Instructions
-       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)\n") (set! flag-interrupt #t)))
-       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)\n") (set! flag-decimal #f)))
-       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)\n") (set! reg-sp reg-x)))
-       ((eq? inst #x18) (begin (display "Clear Carry (18)\n")))
-       ((eq? inst #x38) (begin (display "Set Carry (38)\n")))
+       ((eq? inst #x78) (begin (display "SEI Set Interrupt (78)") (set! flag-interrupt #t)))
+       ((eq? inst #xd8) (begin (display "CLD Clear Decimal (d8)") (set! flag-decimal #f)))
+       ((eq? inst #x9a) (begin (display "Transfer X to Stack ptr (9a)") (set! reg-sp reg-x)))
+       ((eq? inst #x18) (begin (display "Clear Carry (18)")))
+       ((eq? inst #x38) (begin (display "Set Carry (38)")))
        
 					; Branch Instructions
        ((eq? inst #x10) (begin (display "Branch on Plus (10) ") (display1)(inc-sp 1)))
@@ -156,10 +165,10 @@
        ((eq? inst #x7e) (begin (display "Rotate right Absolute,X (7e) ") (display2)(inc-sp 2)))
 
 					; LDA (LoaD Accumulator)
-       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! reg-accumulator (vector-ref main-cpuram reg-pc)) (display reg-accumulator)(newline)(inc-sp 1)))
+       ((eq? inst #xa9) (begin (display "Load Accumulator Immediate (a9) ") (set! reg-accumulator (vector-ref main-cpuram reg-pc)) (display (string "Acc: " reg-accumulator))(inc-sp 1)))
        ((eq? inst #xa5) (begin (display "Load Accumulator Zero Page (a5) ") (display1)))
        ((eq? inst #xb5) (begin (display "Load Accumulator Zero Page,X (b5) ") (display1)))
-       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (set! reg-accumulator (vector-ref main-cpuram (get-memory-address)))(display (string "Acc: " reg-accumulator "\n"))(display2)(inc-sp 2)))
+       ((eq? inst #xad) (begin (display "Load Accumulator Absolute (ad) ") (set! reg-accumulator (vector-ref main-cpuram (get-memory-address)))(display2)(display (string "Acc: " reg-accumulator))(inc-sp 2)))
        ((eq? inst #xbd) (begin (display "Load Accumulator Absolute,X (bd) ") (display2)))
        
 					; STA (STore Accumulator)
@@ -173,7 +182,7 @@
        ((eq? inst #xae) (begin (display "Load X register Absolute (ae) ") (display2)))
 
 					; RTS (ReTurn from Subroutine)
-       ((eq? inst #x60) (begin (display "Return from subroutine Implied (60)\n")))
+       ((eq? inst #x60) (begin (display "Return from subroutine Implied (60)")))
 
 					; LDY (LoaD Y register)
        ((eq? inst #xa0) (begin (display "Load Y register Immediate (a0) ") (display1)))
@@ -197,7 +206,7 @@
        ((eq? inst #x01) (begin (display "Bitwise OR with accumulator Indirect,X  (01) ") (display1)))
        
 					; RTI (ReTurn from Interrupt)
-       ((eq? inst #x40) (begin (display "Return from interrupt Implied (40)\n")))
+       ((eq? inst #x40) (begin (display "Return from interrupt Implied (40)")))
 
 					; EOR (bitwise Exclusive OR)
        ((eq? inst #x41) (begin (display "Bitwise exclusive OR Indirect,X (41) ") (display1)))
@@ -209,15 +218,15 @@
        ((eq? inst #xe6) (begin (display "Increment memory Zero Page (e6) ") (display1)))
        
 					; Register Instructions
-       ((eq? inst #xca) (begin (display "Decrement X (ca) \n")))
-       ((eq? inst #xc8) (begin (display "Increment Y (c8) \n")))
-       ((eq? inst #xa8) (begin (display "Transfer A to Y (a8) \n")))
-       ((eq? inst #x88) (begin (display "Decrement Y (88) \n")))
-       ((eq? inst #xe8) (begin (display "Increment X (e8) \n")))
+       ((eq? inst #xca) (begin (display "Decrement X (ca)")))
+       ((eq? inst #xc8) (begin (display "Increment Y (c8)")))
+       ((eq? inst #xa8) (begin (display "Transfer A to Y (a8)")))
+       ((eq? inst #x88) (begin (display "Decrement Y (88)")))
+       ((eq? inst #xe8) (begin (display "Increment X (e8)")))
 
 					; Stack Instructions
-       ((eq? inst #x68) (begin (display "Pull accumulator (68) \n")))
-       ((eq? inst #x48) (begin (display "Push accumulator (48) \n")))
+       ((eq? inst #x68) (begin (display "Pull accumulator (68)")))
+       ((eq? inst #x48) (begin (display "Push accumulator (48)")))
        
 					; JSR (Jump to SubRoutine)
        ((eq? inst #x20) (begin (display "Jump to SubRoutine Absolute (20) ") (display2)))
@@ -231,10 +240,11 @@
        ((eq? inst #x84) (begin (display "Store Y register Zero Page (84) ") (display1)))
        
 					; LSR (Logical Shift Right)
-       ((eq? inst #x4a) (begin (display "Logical shift right Accumulator (4a) \n")))
+       ((eq? inst #x4a) (begin (display "Logical shift right Accumulator (4a)")))
 
-       (else (display (string "*** Unknown instruction: " inst "\n")))
+       (else (display (string "*** Unknown instruction: " inst)))
        )
+      (newline)
       (if (< cntr 10)
 	  (consume-instructions (+ cntr 1))
 	  )
@@ -259,9 +269,7 @@
 		; Init ppu memory to all zeros 16kB
 		(init-ppuram 16384)
 		; Copy prgrom to $8000 of cpu memory
-		(display "here")
 		(init-prgrom 0 prgrom-size rom-port)
-		(display "here2")
 		(init-chrrom rom-port)
 		(set! reg-pc #xFFFC)
 		(set! interrupt-reset (get-memory-address))
